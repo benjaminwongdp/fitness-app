@@ -2,246 +2,513 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fitness Pro UK</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>FitFlow UK: All-in-One</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .progress-ring { transition: stroke-dashoffset 0.35s; transform: rotate(-90deg); transform-origin: 50% 50%; }
-        body { -webkit-tap-highlight-color: transparent; }
+        :root { --safe-area-inset-top: env(safe-area-inset-top); --safe-area-inset-bottom: env(safe-area-inset-bottom); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .active-day { background-color: white !important; color: #4f46e5 !important; font-weight: 900; transform: scale(1.05); }
+        .active-nav { color: #4f46e5 !important; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal.active { display: flex; }
+        .view { display: none; }
+        .view.active { display: block; }
+        /* 為拍照功能準備的樣式 */
+        #photo-preview { display: none; width: 100%; border-radius: 1rem; margin-top: 1rem; object-fit: cover; height: 150px;}
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen font-sans antialiased text-slate-900">
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900 pb-28 antialiased">
 
-    <div class="max-w-md mx-auto min-h-screen bg-white shadow-2xl flex flex-col">
+    <div id="tdee-modal" class="modal px-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-3">
+            <h2 class="text-xl font-black">Initial Setup (TDEE)</h2>
+            <div class="flex gap-2">
+                <select id="t-gender" class="flex-1 border rounded-xl p-3 text-sm"><option value="m">Male</option><option value="f">Female</option></select>
+                <input id="t-age" type="number" placeholder="Age" class="flex-1 border rounded-xl p-3 text-sm">
+            </div>
+            <div class="flex gap-2">
+                <input id="t-height" type="number" placeholder="Height(cm)" class="flex-1 border rounded-xl p-3 text-sm">
+                <input id="t-weight" type="number" placeholder="Weight(kg)" class="flex-1 border rounded-xl p-3 text-sm">
+            </div>
+            <select id="t-activity" class="w-full border rounded-xl p-3 text-sm">
+                <option value="1.2">Sedentary (No Exercise)</option>
+                <option value="1.375">Light (1-3 days/wk)</option>
+                <option value="1.55">Moderate (3-5 days/wk)</option>
+                <option value="1.725">Heavy (6-7 days/wk)</option>
+            </select>
+            <button onclick="calculateTDEE()" class="w-full bg-indigo-600 text-white rounded-xl py-3 font-bold">Set Weekly Goal</button>
+            <button onclick="closeModal('tdee-modal')" class="w-full text-slate-400 text-sm">Maybe Later</button>
+        </div>
+    </div>
+
+    <div class="max-w-md mx-auto bg-white min-h-screen flex flex-col relative shadow-2xl">
         
-        <header class="bg-indigo-600 p-6 pb-20 text-white relative">
-            <div class="flex justify-between items-center mb-4">
-                <h1 id="ui-title" class="text-xl font-black tracking-tight text-nowrap">FITNESS TRACKER PRO</h1>
-                <button onclick="toggleLang()" class="bg-white/20 px-4 py-1 rounded-full text-xs font-bold hover:bg-white/30">EN/中</button>
-            </div>
-            <div class="absolute left-6 right-6 top-24 bg-white rounded-2xl shadow-xl p-5 text-slate-800 flex items-center justify-between">
-                <div>
-                    <p id="ui-remaining" class="text-xs font-bold text-slate-400 uppercase">Remaining</p>
-                    <p id="remain-kcal" class="text-3xl font-black text-indigo-600">2000</p>
-                    <p class="text-xs text-slate-400 mt-1"><span id="ui-goal">Goal</span>: <span id="goal-val">2000</span> kcal</p>
+        <div id="view-diary" class="view active">
+            <header class="bg-indigo-600 p-6 pb-28 text-white relative rounded-b-[2rem]">
+                <div class="flex justify-between items-center mb-5">
+                    <h1 class="text-xl font-black tracking-tight">FitFlow Diary</h1>
+                    <button onclick="openModal('tdee-modal')" class="bg-white/20 px-3 py-1 rounded-full text-xs font-bold">TDEE</button>
                 </div>
-                <div class="relative h-20 w-20">
-                    <svg class="h-20 w-20">
-                        <circle class="text-slate-100" stroke-width="8" stroke="currentColor" fill="transparent" r="30" cx="40" cy="40"/>
-                        <circle id="progress-circle" class="text-indigo-500 progress-ring" stroke-width="8" stroke-dasharray="188.4" stroke-dashoffset="188.4" stroke-linecap="round" stroke="currentColor" fill="transparent" r="30" cx="40" cy="40"/>
-                    </svg>
-                    <span id="percent-val" class="absolute inset-0 flex items-center justify-center text-xs font-bold">0%</span>
+                <div class="flex justify-between gap-1 overflow-x-auto no-scrollbar">
+                    <button onclick="switchDay(0)" class="day-btn flex-1 min-w-[45px] bg-white/10 p-2 py-3 rounded-xl text-[10px] flex flex-col items-center"><span>MON</span><b id="dot-0" class="opacity-0 text-white text-lg leading-none mt-1">•</b></button>
+                    <button onclick="switchDay(1)" class="day-btn flex-1 min-w-[45px] bg-white/10 p-2 py-3 rounded-xl text-[10px] flex flex-col items-center"><span>TUE</span><b id="dot-1" class="opacity-0 text-white text-lg leading-none mt-1">•</b></button>
+                    <button onclick="switchDay(2)" class="day-btn flex-1 min-w-[45px] bg-white/10 p-2 py-3 rounded-xl text-[10px] flex flex-col items-center"><span>WED</span><b id="dot-2" class="opacity-0 text-white text-lg leading-none mt-1">•</b></button>
+                    <button onclick="switchDay(3)" class="day-btn flex-1 min-w-[45px] bg-white/10 p-2 py-3 rounded-xl text-[10px] flex flex-col items-center"><span>THU</span><b id="dot-4" class="opacity-0 text-white text-lg leading-none mt-1">•</b></button>
+                    <button onclick="switchDay(4)" class="day-btn flex-1 min-w-[45px] bg-white/10 p-2 py-3 rounded-xl text-[10px] flex flex-col items-center"><span>FRI</span><b id="dot-4" class="opacity-0 text-white text-lg leading-none mt-1">•</b></button>
+                    <button onclick="switchDay(5)" class="day-btn flex-1 min-w-[45px] bg-white/10 p-2 py-3 rounded-xl text-[10px] flex flex-col items-center"><span>SAT</span><b id="dot-5" class="opacity-0 text-white text-lg leading-none mt-1">•</b></button>
+                    <button onclick="switchDay(6)" class="day-btn flex-1 min-w-[45px] bg-white/10 p-2 py-3 rounded-xl text-[10px] flex flex-col items-center"><span>SUN</span><b id="dot-6" class="opacity-0 text-white text-lg leading-none mt-1">•</b></button>
                 </div>
-            </div>
-        </header>
+            </header>
 
-        <div class="mt-20 px-6 grid grid-cols-3 gap-4 text-center">
-            <div class="bg-rose-50 p-3 rounded-xl border border-rose-100">
-                <p class="text-[10px] font-bold text-rose-400 uppercase">Protein</p>
-                <p id="display-p" class="font-black text-rose-600">0g</p>
+            <div class="absolute left-6 right-6 top-40 bg-white rounded-2xl shadow-xl p-5 border border-slate-100 grid grid-cols-5 gap-3">
+                <div class="col-span-3">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Remaining (<span id="current-day-label">MON</span>)</p>
+                    <p id="remain-kcal" class="text-4xl font-black text-indigo-600">2000</p>
+                    <p class="text-xs text-slate-400 mt-1">Goal: <span id="goal-val">2000</span> + Exercise: <span id="exercise-burned">0</span></p>
+                </div>
+                <div class="col-span-2 text-right text-xs font-medium text-slate-600 flex flex-col justify-end space-y-1">
+                    <p class="text-rose-500">P: <span id="display-p">0g</span></p>
+                    <p class="text-emerald-600">C: <span id="display-c">0g</span></p>
+                    <p class="text-amber-600">F: <span id="display-f">0g</span></p>
+                </div>
             </div>
-            <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
-                <p class="text-[10px] font-bold text-emerald-400 uppercase">Carbs</p>
-                <p id="display-c" class="font-black text-emerald-600">0g</p>
-            </div>
-            <div class="bg-amber-50 p-3 rounded-xl border border-amber-100">
-                <p class="text-[10px] font-bold text-amber-400 uppercase">Fat</p>
-                <p id="display-f" class="font-black text-amber-600">0g</p>
-            </div>
+
+            <main class="mt-28 p-6 space-y-6">
+                <div class="bg-slate-100 p-4 rounded-2xl space-y-3">
+                    <div id="reader" class="hidden rounded-xl overflow-hidden border-2 border-dashed border-indigo-200 mb-3"></div>
+                    <div class="flex gap-2">
+                        <button onclick="startScan()" class="flex-1 bg-slate-900 text-white rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2">📷 Scan</button>
+                        <input id="food-weight" type="number" placeholder="Value" class="flex-1 border rounded-xl p-3 text-sm bg-white">
+                        <select id="weight-unit" class="w-16 border rounded-xl p-3 text-xs bg-white"><option value="g">g</option><option value="pcs">pcs</option></select>
+                    </div>
+                    <input id="food-name" type="text" placeholder="Food Name / Scanned Item" class="w-full border rounded-xl p-3 text-sm bg-white">
+                    
+                    <div class="grid grid-cols-2 gap-2 pt-2">
+                        <button onclick="addCurrentEntry('diary')" class="bg-indigo-600 text-white rounded-xl py-3 text-sm font-bold">＋ Add Eat</button>
+                        <button onclick="addCurrentEntry('shop')" class="bg-amber-500 text-white rounded-xl py-3 text-sm font-bold">🛒 Buy Later</button>
+                    </div>
+                    
+                    <div class="pt-2 border-t mt-3">
+                        <input type="file" id="camera-input" accept="image/*" capture="camera" class="hidden" onchange="previewPhoto(this)">
+                        <button onclick="document.getElementById('camera-input').click()" class="w-full bg-slate-200 text-slate-700 rounded-xl py-2 text-xs font-bold">📸 Add Photo to Entry</button>
+                        <img id="photo-preview" src="#" alt="preview">
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <h3 class="font-black text-slate-800 flex justify-between">Today's Diary <span class="text-xs text-rose-500" onclick="clearDay()">Clear</span></h3>
+                    <ul id="food-list" class="space-y-2"></ul>
+                </div>
+            </main>
         </div>
 
-        <main class="flex-1 p-6 space-y-4">
-            <div id="reader" class="hidden rounded-2xl overflow-hidden border-2 border-indigo-100 mb-4"></div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="startScan()" class="bg-slate-900 text-white rounded-xl py-4 font-bold flex flex-col items-center justify-center shadow-lg active:scale-95 transition">
-                    <span class="text-xl mb-1">📷</span>
-                    <span id="ui-scan" class="text-xs">Scan Barcode</span>
-                </button>
-                <button onclick="setGoal()" class="bg-white border-2 border-slate-900 text-slate-900 rounded-xl py-4 font-bold flex flex-col items-center justify-center active:scale-95 transition">
-                    <span class="text-xl mb-1">🎯</span>
-                    <span id="ui-set-goal" class="text-xs">Set Goal</span>
-                </button>
-            </div>
-
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                <div class="grid grid-cols-2 gap-3 mb-3">
-                    <input id="food-name" type="text" placeholder="Food Name" class="bg-white border rounded-lg p-3 text-sm focus:ring-2 ring-indigo-500 outline-none">
-                    <input id="food-weight" type="number" placeholder="Weight (g)" class="bg-white border rounded-lg p-3 text-sm focus:ring-2 ring-indigo-500 outline-none">
+        <div id="view-health" class="view">
+            <header class="p-6 pb-2 pt-10"><h1 class="text-3xl font-black">Health Track</h1></header>
+            <main class="p-6 space-y-8">
+                <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex items-center justify-between shadow-inner">
+                    <div>
+                        <p class="text-sm font-bold text-blue-800">💧 Hydration Today</p>
+                        <p class="text-3xl font-black text-blue-600"><span id="water-val">0.0</span> <span class="text-lg">L</span></p>
+                    </div>
+                    <button onclick="addWater(0.25)" class="bg-white border-2 border-blue-200 text-blue-600 rounded-full h-16 w-16 text-3xl font-black shadow-lg">＋</button>
                 </div>
-                <button onclick="addCurrentFood()" class="w-full bg-indigo-600 text-white rounded-lg py-3 font-bold hover:bg-indigo-700">
-                    + <span id="ui-add">Add to Diary</span>
-                </button>
-            </div>
 
-            <div>
-                <div class="flex justify-between items-center mb-4">
-                    <h3 id="ui-diary" class="font-extrabold text-slate-800">Today's Diary</h3>
-                    <button onclick="clearAll()" class="text-xs text-rose-500 font-bold">Clear All</button>
+                <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-slate-800">Weight Trend</h3>
+                        <input id="weight-input" type="number" step="0.1" placeholder="65.5" class="w-20 border rounded-lg p-2 text-sm">
+                        <button onclick="saveWeight()" class="bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold">Log</button>
+                    </div>
+                    <canvas id="weightChart" height="150"></canvas>
                 </div>
-                <ul id="food-list" class="space-y-3 pb-10">
+
+                <div class="bg-slate-100 p-5 rounded-2xl border border-slate-200">
+                    <h3 class="font-bold mb-3">Add Exercise Burned</h3>
+                    <div class="flex gap-2">
+                        <input id="exe-name" type="text" placeholder="Running, Gym..." class="flex-[2] border rounded-lg p-3 text-sm bg-white">
+                        <input id="exe-kcal" type="number" placeholder="Kcal" class="flex-1 border rounded-lg p-3 text-sm bg-white">
+                        <button onclick="addExercise()" class="bg-rose-500 text-white px-4 rounded-lg font-bold">＋</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <div id="view-shop" class="view">
+            <header class="p-6 pb-2 pt-10 flex justify-between items-center">
+                <h1 class="text-3xl font-black">🛒 Shopping List</h1>
+                <button onclick="clearShop()" class="text-xs text-rose-500 font-bold">Clear All</button>
+            </header>
+            <main class="p-6">
+                <div class="flex gap-2 mb-5">
+                    <input id="shop-name" type="text" placeholder="Item name..." class="flex-1 border rounded-lg p-3 text-sm">
+                    <button onclick="addShopManually()" class="bg-amber-500 text-white px-5 rounded-lg font-bold">＋</button>
+                </div>
+                <ul id="shop-list" class="space-y-2">
                     </ul>
-            </div>
-        </main>
+            </main>
+        </div>
+        
+        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-sm border-t p-3 pb-6 flex justify-around shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-50 rounded-t-2xl">
+            <button onclick="switchView('view-diary')" class="flex flex-col items-center gap-1 active-nav text-slate-400">
+                <span class="text-2xl">📖</span><span class="text-[10px] font-bold">Diary</span>
+            </button>
+            <button onclick="switchView('view-health')" class="flex flex-col items-center gap-1 text-slate-400">
+                <span class="text-2xl">❤️</span><span class="text-[10px] font-bold">Health</span>
+            </button>
+            <button onclick="switchView('view-shop')" class="flex flex-col items-center gap-1 text-slate-400">
+                <span class="text-2xl">🛒</span><span class="text-[10px] font-bold">Shop</span>
+            </button>
+        </nav>
     </div>
 
     <script>
-        // Language Data
-        const langData = {
-            zh: { title: "健身進度追蹤", remaining: "剩餘熱量", goal: "目標", scan: "掃描條碼", set: "設定目標", add: "加入清單", diary: "今日飲食", alert_goal: "請輸入每日熱量目標:", loading: "查詢中...", fail: "找不到此產品", kcal: "大卡" },
-            en: { title: "FITNESS TRACKER PRO", remaining: "Remaining", goal: "Goal", scan: "Scan Barcode", set: "Set Goal", add: "Add to Diary", diary: "Today's Diary", alert_goal: "Enter your daily kcal goal:", loading: "Searching...", fail: "Not found", kcal: "kcal" }
-        };
-
+        // === 初始化與核心數據結構 ===
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
         let currentLang = 'en';
-        let dailyGoal = localStorage.getItem('kcalGoal') || 2000;
-        let diary = JSON.parse(localStorage.getItem('fitnessDiary')) || [];
+        let activeDay = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1; // 0=Mon...6=Sun
+        
+        // 數據儲存結構 (localStorage)
+        let goals = JSON.parse(localStorage.getItem('fitGoals')) || Array(7).fill(2000);
+        let weekDiary = JSON.parse(localStorage.getItem('weekDiary')) || Array(7).fill([]);
+        let shopList = JSON.parse(localStorage.getItem('shopList')) || [];
+        let healthData = JSON.parse(localStorage.getItem('healthData')) || { water: {}, weights: [], exercises: Array(7).fill([]) };
+        
         let tempFood = null;
+        let weightChart = null; // Chart.js 實例
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            updateUI();
-            renderList();
+            switchDay(activeDay);
+            renderShopList();
+            initWeightChart();
+            updateHealthUI();
+            
+            // 如果從未設定目標，自動開啟 TDEE 彈窗
+            if (!localStorage.getItem('fitGoals')) openModal('tdee-modal');
         });
 
-        function toggleLang() {
-            currentLang = currentLang === 'en' ? 'zh' : 'en';
-            updateUI();
+        // --- 介面控制系統 ---
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            
+            // Tab 樣式切換
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
+            event.currentTarget.classList.add('active-nav');
+            
+            if (viewId === 'view-health') {
+                if (weightChart) weightChart.update(); // 切換到 Health 時重繪圖表
+            }
+        }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+
+        // --- 模組 1: TDEE 與目標設定 ---
+        function calculateTDEE() {
+            const gender = document.getElementById('t-gender').value;
+            const age = parseFloat(document.getElementById('t-age').value);
+            const h = parseFloat(document.getElementById('t-height').value);
+            const w = parseFloat(document.getElementById('t-weight').value);
+            const act = parseFloat(document.getElementById('t-activity').value);
+            if (!age || !h || !w) return alert("Please fill all fields");
+
+            let bmr = (gender === 'm') 
+                ? (10 * w) + (6.25 * h) - (5 * age) + 5 
+                : (10 * w) + (6.25 * h) - (5 * age) - 161;
+            
+            const tdee = Math.round(bmr * act);
+            if(confirm(`Your TDEE is ${tdee} kcal. Set as daily goal?`)) {
+                goals = Array(7).fill(tdee);
+                saveData();
+                updateUI();
+                closeModal('tdee-modal');
+            }
         }
 
-        function setGoal() {
-            const newGoal = prompt(langData[currentLang].alert_goal, dailyGoal);
-            if (newGoal) {
-                dailyGoal = parseInt(newGoal);
-                localStorage.setItem('kcalGoal', dailyGoal);
-                updateUI();
-            }
+        // --- 模組 2: 飲食日記 (整合拍照與購物清單) ---
+        function switchDay(index) {
+            activeDay = index;
+            document.querySelectorAll('.day-btn').forEach((btn, idx) => {
+                idx === index ? btn.classList.add('active-day') : btn.classList.remove('active-day');
+            });
+            document.getElementById('current-day-label').innerText = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][index];
+            renderDiaryList();
+            updateUI();
         }
 
         async function startScan() {
             const reader = document.getElementById('reader');
             reader.classList.remove('hidden');
             const html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 180 } };
-            
-            try {
-                await html5QrCode.start({ facingMode: "environment" }, config, async (decodedText) => {
-                    html5QrCode.stop();
-                    reader.classList.add('hidden');
-                    document.getElementById('ui-scan').innerText = langData[currentLang].loading;
-                    
-                    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`);
-                    const data = await res.json();
-                    
-                    if (data.status === 1) {
-                        const p = data.product;
-                        tempFood = {
-                            name: p.product_name || p.product_name_en || "UK Product",
-                            kcal: p.nutriments['energy-kcal_100g'] || 0,
-                            p: p.nutriments.proteins_100g || 0,
-                            c: p.nutriments.carbohydrates_100g || 0,
-                            f: p.nutriments.fat_100g || 0
-                        };
-                        document.getElementById('food-name').value = tempFood.name;
-                    } else {
-                        alert(langData[currentLang].fail);
-                    }
-                    document.getElementById('ui-scan').innerText = langData[currentLang].scan;
-                });
-            } catch (err) { alert("Camera Error: Check HTTPS"); }
+            await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (code) => {
+                html5QrCode.stop();
+                reader.classList.add('hidden');
+                const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+                const data = await res.json();
+                if (data.status === 1) {
+                    const p = data.product;
+                    tempFood = {
+                        name: p.product_name_en || p.product_name || "UK Product",
+                        kcal: p.nutriments['energy-kcal_100g'] || 0,
+                        p: p.nutriments.proteins_100g || 0,
+                        c: p.nutriments.carbohydrates_100g || 0,
+                        f: p.nutriments.fat_100g || 0
+                    };
+                    document.getElementById('food-name').value = tempFood.name;
+                    document.getElementById('food-weight').focus();
+                }
+            });
         }
 
-        function addCurrentFood() {
+        // 一鍵加入：日記 或 購物清單
+        let currentPhotoData = null; // 暫存拍照數據
+
+        function addCurrentEntry(type) {
             const name = document.getElementById('food-name').value;
-            const weight = parseFloat(document.getElementById('food-weight').value);
-            
-            if (!name || isNaN(weight)) return;
+            const val = parseFloat(document.getElementById('food-weight').value);
+            const unit = document.getElementById('weight-unit').value;
+
+            if (!name || isNaN(val)) return alert("Please enter name and weight");
 
             const base = tempFood || { kcal: 0, p: 0, c: 0, f: 0 };
-            const ratio = weight / 100;
-            
+            const ratio = val / 100;
+
             const item = {
                 id: Date.now(),
                 name: name,
-                weight: weight,
-                kcal: Math.round(base.kcal * ratio),
+                displayVol: val + unit,
+                // 簡易單位邏輯補償 (如果是pcs則假設單件重量為 API 100g 的數據)
+                kcal: Math.round(base.kcal * ratio * (unit === 'pcs' ? 2.5 : 1)), 
                 p: (base.p * ratio).toFixed(1),
                 c: (base.c * ratio).toFixed(1),
-                f: (base.f * ratio).toFixed(1)
+                f: (base.f * ratio).toFixed(1),
+                photo: currentPhotoData // 存入本地照片數據
             };
 
-            diary.unshift(item);
-            localStorage.setItem('fitnessDiary', JSON.stringify(diary));
+            if (type === 'diary') {
+                if(!weekDiary[activeDay]) weekDiary[activeDay] = [];
+                weekDiary[activeDay].unshift(item);
+            } else if (type === 'shop') {
+                shopList.unshift({ id: Date.now(), name: name, kcal: item.kcal, baseData: tempFood });
+                renderShopList();
+                switchView('view-shop'); // 自動切換到購物清單
+            }
+
+            saveData();
+            renderDiaryList();
+            updateUI();
             
+            // 清空輸入框與拍照預覽
             document.getElementById('food-name').value = '';
             document.getElementById('food-weight').value = '';
+            document.getElementById('photo-preview').style.display = 'none';
+            currentPhotoData = null;
             tempFood = null;
+        }
+
+        function renderDiaryList() {
+            const listEl = document.getElementById('food-list');
+            listEl.innerHTML = '';
+            if(!weekDiary[activeDay] || weekDiary[activeDay].length === 0) return;
             
-            renderList();
+            weekDiary[activeDay].forEach(item => {
+                const li = document.createElement('li');
+                li.className = "bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm";
+                
+                // 是否有照片的視覺化
+                const photoHtml = item.photo ? `<img src="${item.photo}" class="w-10 h-10 rounded-lg object-cover">` : `<div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-lg">🍽️</div>`;
+                
+                li.innerHTML = `
+                    ${photoHtml}
+                    <div class="flex-1">
+                        <p class="font-bold text-slate-800 text-sm">${item.name}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">${item.displayVol} • P:${item.p} C:${item.c} F:${item.f}</p>
+                    </div>
+                    <span class="font-black text-indigo-600 text-lg">${item.kcal}</span>
+                    <button onclick="deleteDiaryItem(${item.id})" class="text-rose-200 ml-2">✕</button>
+                `;
+                listEl.appendChild(li);
+            });
+            refreshDots();
+        }
+
+        function previewPhoto(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentPhotoData = e.target.result; // 將照片轉為 Base64 數據
+                    const preview = document.getElementById('photo-preview');
+                    preview.src = currentPhotoData;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function deleteDiaryItem(id) {
+            weekDiary[activeDay] = weekDiary[activeDay].filter(i => i.id !== id);
+            saveData();
+            renderDiaryList();
             updateUI();
         }
 
-        function renderList() {
-            const listEl = document.getElementById('food-list');
-            listEl.innerHTML = diary.map(item => `
+        function updateUI() {
+            const dayDiary = weekDiary[activeDay] || [];
+            const dayExe = healthData.exercises[activeDay] || [];
+            
+            const eatenKcal = dayDiary.reduce((sum, i) => sum + i.kcal, 0);
+            const burnedKcal = dayExe.reduce((sum, i) => sum + i.kcal, 0);
+            const goal = goals[activeDay];
+
+            const remain = goal - eatenKcal + burnedKcal;
+
+            document.getElementById('goal-val').innerText = goal;
+            document.getElementById('exercise-burned').innerText = burnedKcal;
+            document.getElementById('remain-kcal').innerText = remain;
+            
+            // Macros
+            document.getElementById('display-p').innerText = dayDiary.reduce((sum, i) => sum + parseFloat(i.p), 0).toFixed(1) + 'g';
+            document.getElementById('display-c').innerText = dayDiary.reduce((sum, i) => sum + parseFloat(i.c), 0).toFixed(1) + 'g';
+            document.getElementById('display-f').innerText = dayDiary.reduce((sum, i) => sum + parseFloat(i.f), 0).toFixed(1) + 'g';
+        }
+
+        // --- 模組 3: 健康追蹤 (飲水、體重、運動) ---
+        function updateHealthUI() {
+            // 水
+            const waterVal = healthData.water[today] || 0.0;
+            document.getElementById('water-val').innerText = waterVal.toFixed(1);
+        }
+
+        function addWater(amount) {
+            let current = healthData.water[today] || 0.0;
+            healthData.water[today] = current + amount;
+            saveData();
+            updateHealthUI();
+        }
+
+        // 圖表初始化與功能
+        function initWeightChart() {
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            
+            // 處理數據供 Chart.js 使用
+            const labels = healthData.weights.slice(-7).map(w => w.date.split('-').slice(1).join('/')); // 取最後 7 筆，顯示 MM/DD
+            const data = healthData.weights.slice(-7).map(w => w.value);
+
+            weightChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Weight (kg)',
+                        data: data,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: false, grid: { display: false } }, x: { grid: { display: false } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function saveWeight() {
+            const wVal = parseFloat(document.getElementById('weight-input').value);
+            if (!wVal) return;
+            
+            // 檢查是否今天已經紀錄過，如果過則更新，否則新增
+            const existingIndex = healthData.weights.findIndex(w => w.date === today);
+            if (existingIndex > -1) {
+                healthData.weights[existingIndex].value = wVal;
+            } else {
+                healthData.weights.push({ date: today, value: wVal });
+            }
+            
+            // 排序 (確保日期順序)
+            healthData.weights.sort((a,b) => new Date(a.date) - new Date(b.date));
+            
+            saveData();
+            initWeightChart(); // 重繪圖表
+            document.getElementById('weight-input').value = '';
+        }
+
+        function addExercise() {
+            const name = document.getElementById('exe-name').value;
+            const kcal = parseInt(document.getElementById('exe-kcal').value);
+            if (!name || !kcal) return alert("Fill Name and Kcal");
+
+            if(!healthData.exercises[activeDay]) healthData.exercises[activeDay] = [];
+            
+            healthData.exercises[activeDay].push({ id: Date.now(), name: name, kcal: kcal });
+            saveData();
+            updateUI(); // 更新日記的卡路里計算
+            
+            document.getElementById('exe-name').value = '';
+            document.getElementById('exe-kcal').value = '';
+        }
+
+        // --- 模組 4: 購物清單 ---
+        function renderShopList() {
+            const listEl = document.getElementById('shop-list');
+            listEl.innerHTML = shopList.map(item => `
                 <li class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
-                    <div>
-                        <p class="font-bold text-slate-800">${item.name}</p>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-                            ${item.weight}g • P:${item.p} C:${item.c} F:${item.f}
-                        </p>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <span class="font-black text-indigo-600">${item.kcal}</span>
-                        <button onclick="deleteItem(${item.id})" class="text-rose-200 hover:text-rose-500">✕</button>
-                    </div>
+                    <span class="font-medium text-amber-900">${item.name} <small class="text-slate-400">(${item.kcal} kcal/base)</small></span>
+                    <button onclick="moveToDiary(${item.id})" class="text-xs bg-indigo-50 text-indigo-600 px-3 py-2 rounded-full font-bold">Eat Now</button>
                 </li>
             `).join('');
         }
 
-        function deleteItem(id) {
-            diary = diary.filter(i => i.id !== id);
-            localStorage.setItem('fitnessDiary', JSON.stringify(diary));
-            renderList();
-            updateUI();
+        function addShopManually() {
+            const name = document.getElementById('shop-name').value;
+            if(!name) return;
+            shopList.unshift({ id: Date.now(), name: name, kcal: 0, baseData: null });
+            saveData();
+            renderShopList();
+            document.getElementById('shop-name').value = '';
         }
 
-        function clearAll() {
-            if (confirm("Clear all data?")) {
-                diary = [];
-                localStorage.removeItem('fitnessDiary');
-                renderList();
-                updateUI();
-            }
+        function moveToDiary(id) {
+            const item = shopList.find(i => i.id === id);
+            
+            // 設定為 tempFood，並跳轉回日記視圖
+            tempFood = item.baseData || { kcal: 0, p: 0, c: 0, f: 0, name: item.name };
+            document.getElementById('food-name').value = item.name;
+            
+            // 從購物清單移除
+            shopList = shopList.filter(i => i.id !== id);
+            saveData();
+            renderShopList();
+            
+            switchView('view-diary'); // 跳轉回來
+            document.getElementById('food-weight').focus(); // 聚焦到重量輸入
         }
 
-        function updateUI() {
-            const d = langData[currentLang];
-            document.getElementById('ui-title').innerText = d.title;
-            document.getElementById('ui-remaining').innerText = d.remaining;
-            document.getElementById('ui-goal').innerText = d.goal;
-            document.getElementById('ui-scan').innerText = d.scan;
-            document.getElementById('ui-set-goal').innerText = d.set;
-            document.getElementById('ui-add').innerText = d.add;
-            document.getElementById('ui-diary').innerText = d.diary;
+        function clearShop() { if(confirm("Clear shop list?")) { shopList = []; saveData(); renderShopList(); } }
 
-            const totalKcal = diary.reduce((sum, item) => sum + item.kcal, 0);
-            const totalP = diary.reduce((sum, item) => sum + parseFloat(item.p), 0).toFixed(1);
-            const totalC = diary.reduce((sum, item) => sum + parseFloat(item.c), 0).toFixed(1);
-            const totalF = diary.reduce((sum, item) => sum + parseFloat(item.f), 0).toFixed(1);
-
-            document.getElementById('goal-val').innerText = dailyGoal;
-            document.getElementById('remain-kcal').innerText = dailyGoal - totalKcal;
-            document.getElementById('display-p').innerText = totalP + 'g';
-            document.getElementById('display-c').innerText = totalC + 'g';
-            document.getElementById('display-f').innerText = totalF + 'g';
-
-            // Update Progress Circle
-            const percent = Math.min(Math.round((totalKcal / dailyGoal) * 100), 100);
-            const offset = 188.4 - (percent / 100 * 188.4);
-            document.getElementById('progress-circle').style.strokeDashoffset = offset;
-            document.getElementById('percent-val').innerText = percent + '%';
+        // --- 通用工具與存檔 ---
+        function saveData() {
+            localStorage.setItem('fitGoals', JSON.stringify(goals));
+            localStorage.setItem('weekDiary', JSON.stringify(weekDiary));
+            localStorage.setItem('shopList', JSON.stringify(shopList));
+            localStorage.setItem('healthData', JSON.stringify(healthData));
         }
+
+        function refreshDots() {
+            weekDiary.forEach((day, idx) => {
+                const dot = document.getElementById(`dot-${idx}`);
+                if(dot) dot.style.opacity = (day && day.length > 0) ? "1" : "0";
+            });
+        }
+        function clearDay() { if(confirm("Clear today's diary?")) { weekDiary[activeDay] = []; saveData(); renderDiaryList(); updateUI(); } }
     </script>
 </body>
 </html>
