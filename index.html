@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>FitFlow UK Pro</title>
+    <title>FitFlow UK - Ultimate Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -14,30 +14,33 @@
         .view.active { display: block; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal.active { display: flex; }
-        .quick-tag { @apply px-3 py-1 bg-slate-100 rounded-full text-xs font-bold text-slate-600 hover:bg-indigo-100 hover:text-indigo-600 transition cursor-pointer; }
+        .quick-tag { @apply px-3 py-1 bg-slate-100 rounded-full text-[11px] font-bold text-slate-600 hover:bg-indigo-100 hover:text-indigo-600 transition cursor-pointer border border-transparent hover:border-indigo-200 flex items-center gap-1; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900 pb-24">
 
     <div id="setup-modal" class="modal px-4">
         <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4">
-            <h2 class="text-xl font-black text-indigo-600 text-center">TDEE 計算器</h2>
+            <h2 class="text-xl font-black text-indigo-600 text-center lang-tdee-title">TDEE Calculator</h2>
             <div class="grid grid-cols-2 gap-2">
-                <input id="t-age" type="number" placeholder="年齡" class="border rounded-xl p-3 text-sm bg-slate-50">
-                <select id="t-gender" class="border rounded-xl p-3 text-sm bg-slate-50"><option value="m">男</option><option value="f">女</option></select>
+                <input id="t-age" type="number" placeholder="Age" class="border rounded-xl p-3 text-sm bg-slate-50">
+                <select id="t-gender" class="border rounded-xl p-3 text-sm bg-slate-50">
+                    <option value="m" class="lang-male">Male</option>
+                    <option value="f" class="lang-female">Female</option>
+                </select>
             </div>
             <div class="grid grid-cols-2 gap-2">
-                <input id="t-height" type="number" placeholder="身高(cm)" class="border rounded-xl p-3 text-sm bg-slate-50">
-                <input id="t-weight" type="number" placeholder="體重(kg)" class="border rounded-xl p-3 text-sm bg-slate-50">
+                <input id="t-height" type="number" placeholder="Height(cm)" class="border rounded-xl p-3 text-sm bg-slate-50">
+                <input id="t-weight" type="number" placeholder="Weight(kg)" class="border rounded-xl p-3 text-sm bg-slate-50">
             </div>
             <select id="t-activity" class="w-full border rounded-xl p-3 text-sm bg-slate-50">
-                <option value="1.2">久坐 (辦公室)</option>
-                <option value="1.375">輕量 (運動1-3天)</option>
-                <option value="1.55">中量 (運動3-5天)</option>
-                <option value="1.725">大量 (運動6-7天)</option>
+                <option value="1.2" class="lang-act-1">Sedentary</option>
+                <option value="1.375" class="lang-act-2">Light (1-3 days/wk)</option>
+                <option value="1.55" class="lang-act-3">Moderate (3-5 days/wk)</option>
+                <option value="1.725" class="lang-act-4">Heavy (6-7 days/wk)</option>
             </select>
-            <button onclick="saveTDEE()" class="w-full bg-indigo-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-indigo-200">設定每日目標</button>
-            <button onclick="closeModal('setup-modal')" class="w-full text-slate-400 text-xs">稍後再說</button>
+            <button onclick="saveTDEE()" class="w-full bg-indigo-600 text-white rounded-xl py-3 font-bold shadow-lg lang-set-goal">Set Daily Goal</button>
+            <button onclick="closeModal('setup-modal')" class="w-full text-slate-400 text-xs lang-cancel">Maybe Later</button>
         </div>
     </div>
 
@@ -47,23 +50,24 @@
             <header class="bg-indigo-600 p-6 pb-24 text-white rounded-b-[2.5rem] shadow-lg">
                 <div class="flex justify-between items-center mb-6">
                     <div>
-                        <p id="ui-date-display" class="text-[10px] font-bold opacity-70 uppercase tracking-widest">Tuesday, 14 April</p>
-                        <h1 class="text-2xl font-black">FitFlow Diary</h1>
+                        <p id="ui-date-display" class="text-[10px] font-bold opacity-70 uppercase tracking-widest"></p>
+                        <h1 class="text-2xl font-black tracking-tight">FitFlow Diary</h1>
                     </div>
-                    <button onclick="openModal('setup-modal')" class="bg-white/20 p-2 rounded-xl text-lg">⚙️</button>
+                    <div class="flex gap-2">
+                        <button onclick="toggleLang()" class="bg-white/20 px-3 py-1 rounded-xl text-[10px] font-black border border-white/30">EN / 中</button>
+                        <button onclick="openModal('setup-modal')" class="bg-white/20 p-2 rounded-xl text-lg">⚙️</button>
+                    </div>
                 </div>
-                
-                <div id="date-slider" class="flex justify-between gap-2 overflow-x-auto no-scrollbar pb-2">
-                    </div>
+                <div id="date-slider" class="flex justify-between gap-2 overflow-x-auto no-scrollbar pb-2"></div>
             </header>
 
             <div class="mx-6 -mt-16 bg-white rounded-3xl shadow-xl p-6 border border-slate-50 flex justify-between items-end relative z-10">
                 <div class="space-y-1">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Remaining Kcal</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter lang-remain">Remaining Kcal</p>
                     <p id="remain-kcal" class="text-4xl font-black text-indigo-600">0</p>
                     <div class="flex gap-2 text-[10px] font-bold">
-                        <span class="text-slate-400">Goal: <span id="goal-val" class="text-slate-600">2000</span></span>
-                        <span class="text-emerald-500">Burned: +<span id="exe-val">0</span></span>
+                        <span class="text-slate-400"><span class="lang-goal">Goal</span>: <span id="goal-val">2000</span></span>
+                        <span class="text-emerald-500"><span class="lang-burned">Burned</span>: +<span id="exe-val">0</span></span>
                     </div>
                 </div>
                 <div class="text-right text-[10px] font-bold space-y-1 pb-1">
@@ -75,76 +79,63 @@
 
             <main class="p-6 space-y-6">
                 <div>
-                    <h3 class="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest">常見健身食品 (快捷)</h3>
-                    <div class="flex flex-wrap gap-2">
-                        <div onclick="quickAddFood('雞胸肉(熟)', 165, 31, 0, 3.6)" class="quick-tag">🐔 雞胸肉</div>
-                        <div onclick="quickAddFood('大號雞蛋(隻)', 78, 6.3, 0.6, 5)" class="quick-tag">🥚 雞蛋</div>
-                        <div onclick="quickAddFood('希臘乳酪', 59, 10, 3.6, 0.4)" class="quick-tag">🍦 希臘乳酪</div>
-                        <div onclick="quickAddFood('蛋白粉(份)', 120, 24, 3, 1.5)" class="quick-tag">🥤 蛋白粉</div>
-                        <div onclick="quickAddFood('燕麥(乾)', 389, 17, 66, 7)" class="quick-tag">🥣 燕麥</div>
-                        <div onclick="quickAddFood('牛油果', 160, 2, 8.5, 15)" class="quick-tag">🥑 牛油果</div>
-                    </div>
+                    <h3 class="text-xs font-black text-slate-400 mb-3 uppercase tracking-widest lang-common-food">Common Foods (100g)</h3>
+                    <div id="food-tags" class="flex flex-wrap gap-2 max-h-48 overflow-y-auto no-scrollbar py-1"></div>
                 </div>
 
                 <div class="bg-slate-50 p-5 rounded-3xl border border-slate-100 space-y-3">
                     <div id="reader" class="hidden rounded-2xl overflow-hidden mb-3"></div>
                     <div class="flex gap-2">
                         <button onclick="startScan()" class="bg-slate-900 text-white px-4 rounded-2xl font-bold">📷</button>
-                        <input id="food-name" type="text" placeholder="食品名稱" class="flex-1 border-none bg-white rounded-2xl p-3 text-sm shadow-sm">
+                        <input id="food-name" type="text" class="flex-1 border-none bg-white rounded-2xl p-3 text-sm shadow-sm">
                     </div>
                     <div class="flex gap-2">
-                        <input id="food-weight" type="number" placeholder="重量/件數" class="flex-1 border-none bg-white rounded-2xl p-3 text-sm shadow-sm">
+                        <input id="food-weight" type="number" class="flex-1 border-none bg-white rounded-2xl p-3 text-sm shadow-sm">
                         <select id="weight-unit" class="bg-white rounded-2xl px-4 text-xs font-bold border-none shadow-sm">
-                            <option value="g">克(g)</option>
-                            <option value="pcs">件(pcs)</option>
+                            <option value="g">g</option>
+                            <option value="pcs">pcs</option>
                         </select>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="addEntry('diary')" class="bg-indigo-600 text-white rounded-2xl py-3 font-bold text-sm shadow-lg shadow-indigo-100">＋ 加入今日紀錄</button>
-                        <button onclick="addEntry('shop')" class="bg-amber-500 text-white rounded-2xl py-3 font-bold text-sm shadow-lg shadow-amber-100">🛒 加入購物清單</button>
+                        <button onclick="addEntry('diary')" class="bg-indigo-600 text-white rounded-2xl py-3 font-bold text-sm shadow-lg lang-add-diary"></button>
+                        <button onclick="addEntry('shop')" class="bg-amber-500 text-white rounded-2xl py-3 font-bold text-sm shadow-lg lang-add-shop"></button>
                     </div>
                 </div>
 
                 <div class="space-y-3 pb-10">
-                    <h3 class="font-black text-slate-800 flex justify-between items-center">今日飲食紀錄 <button onclick="clearDay()" class="text-[10px] text-rose-400">清空</button></h3>
+                    <h3 class="font-black text-slate-800 flex justify-between items-center"><span class="lang-diary-title">Today's Diary</span> <button onclick="clearDay()" class="text-[10px] text-rose-400 lang-clear">Clear</button></h3>
                     <ul id="food-list" class="space-y-3"></ul>
                 </div>
             </main>
         </div>
 
         <div id="view-health" class="view">
-            <header class="p-8 pt-12"><h1 class="text-3xl font-black">Health Track</h1></header>
+            <header class="p-8 pt-12"><h1 class="text-3xl font-black lang-health-title">Health Track</h1></header>
             <main class="p-6 space-y-6">
-                <div class="bg-blue-500 p-6 rounded-[2rem] text-white flex justify-between items-center shadow-xl shadow-blue-100">
+                <div class="bg-blue-500 p-6 rounded-[2rem] text-white flex justify-between items-center shadow-xl">
                     <div>
-                        <p class="text-xs font-bold opacity-80 uppercase">Water Today</p>
+                        <p class="text-xs font-bold opacity-80 uppercase lang-water-today">Water Today</p>
                         <p class="text-4xl font-black"><span id="water-val">0.0</span> <small class="text-sm">L</small></p>
                     </div>
-                    <button onclick="addWater(0.25)" class="bg-white/20 h-16 w-16 rounded-2xl text-3xl font-bold hover:bg-white/30 transition">＋</button>
+                    <button onclick="addWater(0.25)" class="bg-white/20 h-16 w-16 rounded-2xl text-3xl font-bold">＋</button>
                 </div>
 
                 <div class="bg-white p-6 rounded-[2rem] border shadow-sm space-y-4">
                     <div class="flex justify-between items-center">
-                        <h3 class="font-black text-slate-800">體重趨勢</h3>
+                        <h3 class="font-black text-slate-800 lang-weight-trend">Weight Trend</h3>
                         <div class="flex gap-2">
                             <input id="w-input" type="number" step="0.1" placeholder="kg" class="w-16 bg-slate-100 border-none rounded-lg p-2 text-xs font-bold">
-                            <button onclick="saveWeight()" class="bg-slate-900 text-white px-3 py-2 rounded-lg text-[10px] font-bold">記錄</button>
+                            <button onclick="saveWeight()" class="bg-slate-900 text-white px-3 py-2 rounded-lg text-[10px] font-bold lang-log">Log</button>
                         </div>
                     </div>
                     <canvas id="weightChart" height="180"></canvas>
                 </div>
 
                 <div class="bg-slate-900 p-6 rounded-[2rem] text-white space-y-4">
-                    <h3 class="font-bold text-sm">熱門運動快捷</h3>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="quickAddExe('慢跑 (30min)', 300)" class="px-3 py-2 bg-white/10 rounded-xl text-xs hover:bg-white/20">🏃 慢跑</button>
-                        <button onclick="quickAddExe('重訓 (1hr)', 250)" class="px-3 py-2 bg-white/10 rounded-xl text-xs hover:bg-white/20">🏋️ 重訓</button>
-                        <button onclick="quickAddExe('游泳 (30min)', 400)" class="px-3 py-2 bg-white/10 rounded-xl text-xs hover:bg-white/20">🏊 游泳</button>
-                        <button onclick="quickAddExe('HIIT (20min)', 200)" class="px-3 py-2 bg-white/10 rounded-xl text-xs hover:bg-white/20">🔥 HIIT</button>
-                        <button onclick="quickAddExe('步行 (5km)', 250)" class="px-3 py-2 bg-white/10 rounded-xl text-xs hover:bg-white/20">🚶 步行</button>
-                    </div>
+                    <h3 class="font-bold text-sm lang-exe-quick">Exercises (per hour)</h3>
+                    <div id="exe-tags" class="flex flex-wrap gap-2"></div>
                     <div class="flex gap-2 pt-2 border-t border-white/10">
-                        <input id="e-name" type="text" placeholder="自定義運動" class="flex-1 bg-white/10 border-none rounded-xl p-3 text-xs">
+                        <input id="e-name" type="text" class="flex-1 bg-white/10 border-none rounded-xl p-3 text-xs">
                         <input id="e-kcal" type="number" placeholder="Kcal" class="w-20 bg-white/10 border-none rounded-xl p-3 text-xs">
                         <button onclick="addExercise()" class="bg-rose-500 px-4 rounded-xl font-bold">＋</button>
                     </div>
@@ -153,10 +144,13 @@
         </div>
 
         <div id="view-shop" class="view">
-            <header class="p-8 pt-12 flex justify-between items-center"><h1 class="text-3xl font-black">Shopping</h1><button onclick="clearShop()" class="text-xs text-rose-400">清空</button></header>
+            <header class="p-8 pt-12 flex justify-between items-center">
+                <h1 class="text-3xl font-black lang-shop-title">Shopping</h1>
+                <button onclick="clearShop()" class="text-xs text-rose-400 lang-clear">Clear</button>
+            </header>
             <main class="p-6">
                 <div class="flex gap-2 mb-6">
-                    <input id="s-input" type="text" placeholder="想買什麼..." class="flex-1 bg-slate-100 border-none rounded-2xl p-4 text-sm font-medium">
+                    <input id="s-input" type="text" class="flex-1 bg-slate-100 border-none rounded-2xl p-4 text-sm font-medium">
                     <button onclick="addShop()" class="bg-amber-500 text-white px-6 rounded-2xl font-black">＋</button>
                 </div>
                 <ul id="shop-list" class="space-y-3"></ul>
@@ -164,83 +158,146 @@
         </div>
 
         <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/80 backdrop-blur-md border-t p-4 flex justify-around items-center z-50 rounded-t-[2rem] shadow-2xl">
-            <button onclick="switchView('view-diary')" class="flex flex-col items-center gap-1 text-indigo-600"><span class="text-xl">📖</span><span class="text-[9px] font-bold">DIARY</span></button>
-            <button onclick="switchView('view-health')" class="flex flex-col items-center gap-1 text-slate-400"><span class="text-xl">💪</span><span class="text-[9px] font-bold">HEALTH</span></button>
-            <button onclick="switchView('view-shop')" class="flex flex-col items-center gap-1 text-slate-400"><span class="text-xl">🛒</span><span class="text-[9px] font-bold">SHOP</span></button>
+            <button onclick="switchView('view-diary')" class="flex flex-col items-center gap-1 text-indigo-600"><span class="text-xl">📖</span><span class="text-[9px] font-bold lang-nav-diary"></span></button>
+            <button onclick="switchView('view-health')" class="flex flex-col items-center gap-1 text-slate-400"><span class="text-xl">💪</span><span class="text-[9px] font-bold lang-nav-health"></span></button>
+            <button onclick="switchView('view-shop')" class="flex flex-col items-center gap-1 text-slate-400"><span class="text-xl">🛒</span><span class="text-[9px] font-bold lang-nav-shop"></span></button>
         </nav>
     </div>
 
     <script>
-        // --- 核心數據與初始化 ---
-        let selectedDate = new Date().toISOString().split('T')[0]; // 當前選取的日期 (格式: YYYY-MM-DD)
-        
-        // 從 LocalStorage 獲取數據，若無則初始化
-        let userProfile = JSON.parse(localStorage.getItem('fitProfile')) || { tdee: 2000, weights: [] };
-        let allLogs = JSON.parse(localStorage.getItem('fitLogs')) || {}; // 格式: {'2024-05-20': {foods:[], water:0, exes:[]}}
-        let shopItems = JSON.parse(localStorage.getItem('fitShop')) || [];
+        // --- DATA & PRESETS ---
+        const PRESETS = [
+            { id: 1, en: "Chicken Breast", zh: "雞胸肉", k: 165, p: 31, c: 0, f: 3.6, icon: "🐔" },
+            { id: 2, en: "Egg", zh: "雞蛋", k: 155, p: 13, c: 1.1, f: 11, icon: "🥚" }, // per 100g (~2 eggs)
+            { id: 3, en: "Greek Yogurt", zh: "希臘乳酪", k: 59, p: 10, c: 3.6, f: 0.4, icon: "🍦" },
+            { id: 4, en: "Whey Protein", zh: "蛋白粉", k: 390, p: 80, c: 8, f: 4, icon: "🥤" },
+            { id: 5, en: "Oats", zh: "燕麥", k: 389, p: 16.9, c: 66, f: 6.9, icon: "🥣" },
+            { id: 6, en: "Avocado", zh: "牛油果", k: 160, p: 2, c: 8.5, f: 15, icon: "🥑" },
+            { id: 7, en: "Salmon", zh: "三文魚", k: 208, p: 20, c: 0, f: 13, icon: "🐟" },
+            { id: 8, en: "Beef", zh: "牛肉", k: 250, p: 26, c: 0, f: 15, icon: "🥩" },
+            { id: 9, en: "Sweet Potato", zh: "番薯", k: 86, p: 1.6, c: 20, f: 0.1, icon: "🍠" },
+            { id: 10, en: "Brown Rice", zh: "玄米", k: 111, p: 2.6, c: 23, f: 0.9, icon: "🍚" },
+            { id: 11, en: "Broccoli", zh: "西蘭花", k: 34, p: 2.8, c: 7, f: 0.4, icon: "🥦" },
+            { id: 12, en: "Banana", zh: "香蕉", k: 89, p: 1.1, c: 23, f: 0.3, icon: "🍌" },
+            { id: 13, en: "Almonds", zh: "杏仁", k: 579, p: 21, c: 22, f: 49, icon: "🥜" },
+            { id: 14, en: "Peanut Butter", zh: "花生醬", k: 588, p: 25, c: 20, f: 50, icon: "🍯" },
+            { id: 15, en: "Tofu", zh: "豆腐", k: 76, p: 8, c: 1.9, f: 4.8, icon: "🧊" },
+            { id: 16, en: "Milk (Semi)", zh: "半脫脂奶", k: 50, p: 3.4, c: 4.8, f: 1.8, icon: "🥛" },
+            { id: 17, en: "Tuna (Can)", zh: "水浸吞拿魚", k: 116, p: 26, c: 0, f: 0.8, icon: "🥫" },
+            { id: 18, en: "Quinoa", zh: "藜麥", k: 120, p: 4.4, c: 21, f: 1.9, icon: "🥗" },
+            { id: 19, en: "Cottage Cheese", zh: "茅屋起司", k: 98, p: 11, c: 3.4, f: 4.3, icon: "🧀" },
+            { id: 20, en: "Blueberry", zh: "藍莓", k: 57, p: 0.7, c: 14, f: 0.3, icon: "🫐" }
+        ];
 
+        const EXERCISES = [
+            { en: "Run", zh: "慢跑", k: 600, icon: "🏃" },
+            { en: "Weights", zh: "重訓", k: 300, icon: "🏋️" },
+            { en: "Swim", zh: "游泳", k: 500, icon: "🏊" },
+            { en: "HIIT", zh: "HIIT", k: 700, icon: "🔥" },
+            { en: "Walk", zh: "步行", k: 250, icon: "🚶" },
+            { en: "Cycle", zh: "單車", k: 450, icon: "🚴" }
+        ];
+
+        const i18n = {
+            en: {
+                remain: "Remaining Kcal", goal: "Goal", burned: "Burned", commonFood: "Preset Foods (100g)", 
+                diaryTitle: "Daily Records", clear: "Clear", healthTitle: "Health", 
+                waterToday: "Water Today", weightTrend: "Weight Trend", exeQuick: "Exercise (per hr)", 
+                shopTitle: "Shopping", navDiary: "DIARY", navHealth: "HEALTH", navShop: "SHOP",
+                phName: "Food Name", phWeight: "Weight / Qty", addDiary: "+ Today", addShop: "🛒 Shop List",
+                phExe: "Exercise", log: "Log", phShop: "Items to buy...", tdeeTitle: "TDEE Calculator",
+                male: "Male", female: "Female", act1: "Sedentary", act2: "Light", act3: "Moderate", act4: "Heavy",
+                setGoal: "Set Daily Goal", cancel: "Cancel", eatNow: "Eat Now", scanOk: "Scanned!"
+            },
+            zh: {
+                remain: "剩餘熱量", goal: "目標", burned: "運動消耗", commonFood: "預設健身食品 (每100g)", 
+                diaryTitle: "今日飲食紀錄", clear: "清空", healthTitle: "健康數據", 
+                waterToday: "今日飲水量", weightTrend: "體重趨勢", exeQuick: "熱門運動 (每小時)", 
+                shopTitle: "購物清單", navDiary: "飲食日記", navHealth: "健康追蹤", navShop: "清單",
+                phName: "食品名稱", phWeight: "重量 / 份數", addDiary: "＋ 加入日記", addShop: "🛒 購物清單",
+                phExe: "運動項目", log: "記錄", phShop: "想買什麼...", tdeeTitle: "TDEE 計算器",
+                male: "男", female: "女", act1: "久坐", act2: "輕量", act3: "中量", act4: "大量",
+                setGoal: "設定每日目標", cancel: "取消", eatNow: "現在吃", scanOk: "掃描成功！"
+            }
+        };
+
+        // --- APP STATE ---
+        let currentLang = localStorage.getItem('fitLang') || 'en';
+        let selectedDate = new Date().toISOString().split('T')[0];
+        let userProfile = JSON.parse(localStorage.getItem('fitProfile')) || { tdee: 2000, weights: [] };
+        let allLogs = JSON.parse(localStorage.getItem('fitLogs')) || {};
+        let shopItems = JSON.parse(localStorage.getItem('fitShop')) || [];
         let weightChart = null;
         let tempScanned = null;
 
         document.addEventListener('DOMContentLoaded', () => {
+            applyLang();
             renderDateSlider();
             loadDateData();
             initChart();
             renderShop();
         });
 
-        // --- 日期與週計劃邏輯 ---
+        // --- CORE LOGIC ---
+        function toggleLang() {
+            currentLang = currentLang === 'en' ? 'zh' : 'en';
+            localStorage.setItem('fitLang', currentLang);
+            applyLang();
+            renderDateSlider();
+            renderDiary();
+            renderShop();
+        }
+
+        function applyLang() {
+            const t = i18n[currentLang];
+            Object.keys(t).forEach(key => {
+                const els = document.querySelectorAll(`.lang-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`);
+                els.forEach(el => el.innerText = t[key]);
+            });
+            document.getElementById('food-name').placeholder = t.phName;
+            document.getElementById('food-weight').placeholder = t.phWeight;
+            document.getElementById('e-name').placeholder = t.phExe;
+            document.getElementById('s-input').placeholder = t.phShop;
+
+            document.getElementById('food-tags').innerHTML = PRESETS.map(f => `
+                <div onclick="quickAddFood(${f.id})" class="quick-tag">${f.icon} ${currentLang === 'en' ? f.en : f.zh}</div>
+            `).join('');
+
+            document.getElementById('exe-tags').innerHTML = EXERCISES.map(e => `
+                <button onclick="quickAddExe('${currentLang==='en'?e.en:e.zh}', ${e.k})" class="px-3 py-2 bg-white/10 rounded-xl text-[10px] font-bold hover:bg-white/20">
+                    ${e.icon} ${currentLang === 'en' ? e.en : e.zh}
+                </button>
+            `).join('');
+        }
+
         function renderDateSlider() {
-            const slider = document.getElementById('date-slider');
-            slider.innerHTML = '';
-            
-            // 生成過去 3 天 + 今天 + 未來 3 天，共 7 天
+            const slider = document.getElementById('date-slider'); slider.innerHTML = '';
             for (let i = -3; i <= 3; i++) {
-                let d = new Date();
-                d.setDate(d.getDate() + i);
+                let d = new Date(); d.setDate(d.getDate() + i);
                 let dateStr = d.toISOString().split('T')[0];
                 let isToday = i === 0;
-                let dayName = d.toLocaleDateString('en-US', {weekday: 'short'});
-                let dayNum = d.getDate();
-
                 const btn = document.createElement('button');
-                btn.className = `day-btn flex-1 min-w-[55px] p-3 rounded-2xl flex flex-col items-center transition ${dateStr === selectedDate ? 'active-day' : 'bg-white/10'}`;
+                btn.className = `day-btn min-w-[50px] p-2 rounded-2xl flex flex-col items-center transition ${dateStr === selectedDate ? 'active-day' : 'bg-white/10'}`;
                 btn.onclick = () => { selectedDate = dateStr; renderDateSlider(); loadDateData(); };
-                btn.innerHTML = `<span class="text-[9px] font-bold opacity-70">${dayName}</span><span class="text-lg font-black">${dayNum}</span>`;
+                btn.innerHTML = `
+                    <span class="text-[8px] font-bold opacity-60 uppercase">${d.toLocaleDateString(currentLang==='zh'?'zh-TW':'en-US', {weekday:'short'})}</span>
+                    <span class="text-base font-black">${d.getDate()}</span>
+                `;
                 slider.appendChild(btn);
             }
-            document.getElementById('ui-date-display').innerText = new Date(selectedDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric', weekday: 'long'});
+            document.getElementById('ui-date-display').innerText = new Date(selectedDate).toLocaleDateString(currentLang==='zh'?'zh-TW':'en-US', {month:'long', day:'numeric', weekday:'long'});
         }
 
         function loadDateData() {
-            if (!allLogs[selectedDate]) {
-                allLogs[selectedDate] = { foods: [], water: 0, exes: [] };
-            }
-            renderDiary();
-            updateStats();
+            if (!allLogs[selectedDate]) allLogs[selectedDate] = { foods: [], water: 0, exes: [] };
+            renderDiary(); updateStats();
         }
 
-        // --- 飲食功能 ---
-        async function startScan() {
-            const reader = document.getElementById('reader');
-            reader.classList.remove('hidden');
-            const scanner = new Html5Qrcode("reader");
-            await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (code) => {
-                scanner.stop(); reader.classList.add('hidden');
-                const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
-                const data = await res.json();
-                if (data.status === 1) {
-                    const p = data.product;
-                    tempScanned = { name: p.product_name_en || p.product_name || "UK Item", kcal: p.nutriments['energy-kcal_100g']||0, p: p.nutriments.proteins_100g||0, c: p.nutriments.carbohydrates_100g||0, f: p.nutriments.fat_100g||0 };
-                    document.getElementById('food-name').value = tempScanned.name;
-                    alert("掃描成功！請輸入重量。");
-                }
-            });
-        }
-
-        function quickAddFood(name, kcal, p, c, f) {
+        function quickAddFood(id) {
+            const f = PRESETS.find(p => p.id === id);
+            const name = currentLang === 'en' ? f.en : f.zh;
             document.getElementById('food-name').value = name;
-            tempScanned = { name, kcal, p, c, f };
+            tempScanned = { name, kcal: f.k, p: f.p, c: f.c, f: f.f };
             document.getElementById('food-weight').focus();
         }
 
@@ -248,28 +305,31 @@
             const name = document.getElementById('food-name').value;
             const val = parseFloat(document.getElementById('food-weight').value);
             const unit = document.getElementById('weight-unit').value;
-            if (!name || isNaN(val)) return alert("請輸入名稱和份量");
+            if (!name || isNaN(val)) return;
 
             const base = tempScanned || { kcal: 0, p: 0, c: 0, f: 0 };
-            const ratio = (unit === 'pcs') ? val : val / 100;
+            // Egg special logic: 1 egg approx 50g
+            let weightRatio = (unit === 'pcs' && name.includes(i18n[currentLang].egg || 'Egg')) ? (val * 0.5) : (unit === 'pcs' ? val : val / 100);
+            if (!tempScanned) weightRatio = (unit === 'pcs') ? val : val / 100;
 
-            const entry = { id: Date.now(), name, kcal: Math.round(base.kcal * ratio), p: (base.p * ratio).toFixed(1), c: (base.c * ratio).toFixed(1), f: (base.f * ratio).toFixed(1), vol: val+unit };
+            const entry = {
+                id: Date.now(),
+                name,
+                kcal: Math.round(base.kcal * weightRatio),
+                p: (base.p * weightRatio).toFixed(1),
+                c: (base.c * weightRatio).toFixed(1),
+                f: (base.f * weightRatio).toFixed(1),
+                vol: val + unit
+            };
 
             if (type === 'diary') {
                 allLogs[selectedDate].foods.unshift(entry);
-                saveAll();
-                renderDiary();
-                updateStats();
+                saveAll(); renderDiary(); updateStats();
             } else {
                 shopItems.unshift({ id: Date.now(), name, entry });
-                saveAll();
-                renderShop();
-                switchView('view-shop');
+                saveAll(); renderShop(); switchView('view-shop');
             }
-            // 重置
-            document.getElementById('food-name').value = '';
-            document.getElementById('food-weight').value = '';
-            tempScanned = null;
+            resetInput();
         }
 
         function renderDiary() {
@@ -287,41 +347,43 @@
             const eaten = data.foods.reduce((s, i) => s + i.kcal, 0);
             const burned = data.exes.reduce((s, i) => s + i.kcal, 0);
             const remain = userProfile.tdee - eaten + burned;
-
             document.getElementById('remain-kcal').innerText = remain;
             document.getElementById('goal-val').innerText = userProfile.tdee;
             document.getElementById('exe-val').innerText = burned;
             document.getElementById('water-val').innerText = (data.water || 0).toFixed(1);
-            
             document.getElementById('p-val').innerText = data.foods.reduce((s, i) => s + parseFloat(i.p), 0).toFixed(1);
             document.getElementById('c-val').innerText = data.foods.reduce((s, i) => s + parseFloat(i.c), 0).toFixed(1);
             document.getElementById('f-val').innerText = data.foods.reduce((s, i) => s + parseFloat(i.f), 0).toFixed(1);
         }
 
-        // --- 健康功能 ---
-        function addWater(v) { allLogs[selectedDate].water += v; saveAll(); updateStats(); }
-
-        function quickAddExe(name, kcal) {
-            allLogs[selectedDate].exes.push({ id: Date.now(), name, kcal });
-            saveAll(); updateStats(); alert(`已加入: ${name}`);
+        async function startScan() {
+            const reader = document.getElementById('reader'); reader.classList.remove('hidden');
+            const scanner = new Html5Qrcode("reader");
+            await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (code) => {
+                scanner.stop(); reader.classList.add('hidden');
+                const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+                const data = await res.json();
+                if (data.status === 1) {
+                    const p = data.product;
+                    tempScanned = { name: p.product_name || "Item", kcal: p.nutriments['energy-kcal_100g']||0, p: p.nutriments.proteins_100g||0, c: p.nutriments.carbohydrates_100g||0, f: p.nutriments.fat_100g||0 };
+                    document.getElementById('food-name').value = tempScanned.name;
+                }
+            });
         }
 
+        function addWater(v) { allLogs[selectedDate].water += v; saveAll(); updateStats(); }
+        function quickAddExe(name, kcal) { allLogs[selectedDate].exes.push({ id: Date.now(), name, kcal }); saveAll(); updateStats(); }
         function addExercise() {
-            const name = document.getElementById('e-name').value;
-            const kcal = parseInt(document.getElementById('e-kcal').value);
-            if (!name || !kcal) return;
-            allLogs[selectedDate].exes.push({ id: Date.now(), name, kcal });
-            saveAll(); updateStats();
+            const name = document.getElementById('e-name').value; const kcal = parseInt(document.getElementById('e-kcal').value);
+            if (!name || !kcal) return; allLogs[selectedDate].exes.push({ id: Date.now(), name, kcal }); saveAll(); updateStats();
             document.getElementById('e-name').value = ''; document.getElementById('e-kcal').value = '';
         }
 
         function saveWeight() {
-            const v = parseFloat(document.getElementById('w-input').value);
-            if (!v) return;
+            const v = parseFloat(document.getElementById('w-input').value); if (!v) return;
             userProfile.weights.push({ date: selectedDate, value: v });
             userProfile.weights.sort((a,b) => new Date(a.date) - new Date(b.date));
-            saveAll(); initChart();
-            document.getElementById('w-input').value = '';
+            saveAll(); initChart(); document.getElementById('w-input').value = '';
         }
 
         function initChart() {
@@ -332,49 +394,43 @@
                 type: 'line',
                 data: {
                     labels: last7.map(w => w.date.split('-').slice(1).join('/')),
-                    datasets: [{ data: last7.map(w => w.value), borderColor: '#4f46e5', tension: 0.4, fill: false, pointRadius: 5 }]
+                    datasets: [{ data: last7.map(w => w.value), borderColor: '#4f46e5', tension: 0.4, fill: false, pointRadius: 4 }]
                 },
-                options: { plugins: { legend: { display: false } }, scales: { y: { grid: { display: false } }, x: { grid: { display: false } } } }
+                options: { plugins: { legend: { display: false } }, scales: { y: { display: true }, x: { grid: { display: false } } } }
             });
         }
 
-        // --- 購物清單 ---
         function renderShop() {
             document.getElementById('shop-list').innerHTML = shopItems.map(i => `
                 <li class="bg-slate-50 p-4 rounded-2xl flex justify-between items-center">
                     <span class="font-bold text-sm">${i.name}</span>
-                    <button onclick="shopToDiary(${i.id})" class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold">Eat Now</button>
+                    <button onclick="shopToDiary(${i.id})" class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold">${i18n[currentLang].eatNow}</button>
                 </li>
             `).join('');
         }
         function addShop() {
-            const name = document.getElementById('s-input').value;
-            if(!name) return;
-            shopItems.unshift({ id: Date.now(), name });
-            saveAll(); renderShop(); document.getElementById('s-input').value = '';
+            const n = document.getElementById('s-input').value; if(!n) return;
+            shopItems.unshift({ id: Date.now(), name: n }); saveAll(); renderShop(); document.getElementById('s-input').value = '';
         }
         function shopToDiary(id) {
             const item = shopItems.find(i => i.id === id);
             document.getElementById('food-name').value = item.name;
-            shopItems = shopItems.filter(i => i.id !== id);
-            saveAll(); renderShop(); switchView('view-diary');
+            shopItems = shopItems.filter(i => i.id !== id); saveAll(); renderShop(); switchView('view-diary');
             document.getElementById('food-weight').focus();
         }
 
-        // --- 全局功能 ---
         function switchView(id) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             document.querySelectorAll('nav button').forEach(b => b.classList.add('text-slate-400'));
-            event.currentTarget.classList.remove('text-slate-400');
-            event.currentTarget.classList.add('text-indigo-600');
+            const idx = id==='view-diary'?0:(id==='view-health'?1:2);
+            document.querySelectorAll('nav button')[idx].classList.remove('text-slate-400');
+            document.querySelectorAll('nav button')[idx].classList.add('text-indigo-600');
         }
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
         function saveTDEE() {
-            const age = document.getElementById('t-age').value;
-            const w = document.getElementById('t-weight').value;
-            const h = document.getElementById('t-height').value;
+            const age = document.getElementById('t-age').value, w = document.getElementById('t-weight').value, h = document.getElementById('t-height').value;
             if(!age || !w || !h) return;
             const bmr = (document.getElementById('t-gender').value === 'm') ? (10*w)+(6.25*h)-(5*age)+5 : (10*w)+(6.25*h)-(5*age)-161;
             userProfile.tdee = Math.round(bmr * document.getElementById('t-activity').value);
@@ -385,8 +441,9 @@
             localStorage.setItem('fitLogs', JSON.stringify(allLogs));
             localStorage.setItem('fitShop', JSON.stringify(shopItems));
         }
+        function resetInput() { document.getElementById('food-name').value=''; document.getElementById('food-weight').value=''; tempScanned=null; }
         function delFood(id) { allLogs[selectedDate].foods = allLogs[selectedDate].foods.filter(f => f.id !== id); saveAll(); renderDiary(); updateStats(); }
-        function clearDay() { if(confirm("清空今日數據？")) { allLogs[selectedDate] = { foods:[], water:0, exes:[] }; saveAll(); renderDiary(); updateStats(); } }
+        function clearDay() { if(confirm(i18n[currentLang].clear+"?")) { allLogs[selectedDate] = { foods:[], water:0, exes:[] }; saveAll(); renderDiary(); updateStats(); } }
         function clearShop() { shopItems = []; saveAll(); renderShop(); }
     </script>
 </body>
