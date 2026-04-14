@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitness Tracker UK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 font-sans">
+    <div class="max-w-md mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
+        
+        <div class="bg-indigo-700 p-6 text-white text-center relative">
+            <button onclick="toggleLang()" class="absolute right-4 top-4 bg-white/20 px-3 py-1 rounded-full text-xs hover:bg-white/30 transition">
+                EN / 中文
+            </button>
+            <h1 id="ui-title" class="text-2xl font-black">健身飲食計算 (UK)</h1>
+            <p id="ui-subtitle" class="text-indigo-200 text-xs mt-1">支援英國超市條碼掃描</p>
+        </div>
+
+        <div class="flex justify-around p-5 bg-white border-b">
+            <div class="text-center">
+                <p id="ui-total-kcal" class="text-[10px] text-gray-400 font-bold">CALORIES</p>
+                <p id="display-kcal" class="text-xl font-black text-indigo-600">0</p>
+            </div>
+            <div class="text-center border-x px-6">
+                <p id="ui-total-p" class="text-[10px] text-gray-400 font-bold">PROTEIN</p>
+                <p id="display-p" class="text-xl font-black text-rose-500">0g</p>
+            </div>
+            <div class="text-center">
+                <p id="ui-total-cf" class="text-[10px] text-gray-400 font-bold">C / F</p>
+                <p id="display-cf" class="text-sm font-bold text-gray-600 pt-1">0g / 0g</p>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div id="reader" class="hidden rounded-xl overflow-hidden border-2 border-dashed border-gray-300"></div>
+            
+            <button id="scan-btn" onclick="startScan()" class="w-full bg-emerald-500 text-white rounded-xl py-3 font-bold flex items-center justify-center gap-2 hover:bg-emerald-600 transition">
+                📷 <span id="ui-scan">掃描條碼 (Scan Barcode)</span>
+            </button>
+
+            <div class="grid grid-cols-2 gap-3">
+                <input id="food-name" type="text" placeholder="食物名稱 Name" class="border-2 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none">
+                <input id="food-weight" type="number" placeholder="重量 Weight(g)" class="border-2 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none">
+            </div>
+            <button onclick="addCurrentFood()" class="w-full bg-indigo-600 text-white rounded-xl py-3 font-bold shadow-lg hover:bg-indigo-700 active:scale-95 transition">
+                + <span id="ui-add">加入清單 (Add to List)</span>
+            </button>
+        </div>
+
+        <div class="p-6 pt-0">
+            <ul id="food-list" class="space-y-2"></ul>
+        </div>
+    </div>
+
+    <script>
+        // 1. 語言設定
+        let currentLang = 'zh';
+        const langData = {
+            zh: { title: "健身飲食計算", subtitle: "支援英國超市條碼掃描", kcal: "總熱量", p: "蛋白質", cf: "碳水/脂肪", scan: "掃描條碼", add: "加入清單", loading: "查詢中...", fail: "找不到此產品", manual: "請手動輸入重量" },
+            en: { title: "Fitness Tracker", subtitle: "UK Barcode Support", kcal: "CALORIES", p: "PROTEIN", cf: "CARB / FAT", scan: "Scan Barcode", add: "Add Item", loading: "Fetching...", fail: "Product not found", manual: "Please enter weight" }
+        };
+
+        // 2. 核心數據
+        let totals = { kcal: 0, p: 0, c: 0, f: 0 };
+        let tempFood = null;
+
+        function toggleLang() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            const d = langData[currentLang];
+            document.getElementById('ui-title').innerText = d.title;
+            document.getElementById('ui-subtitle').innerText = d.subtitle;
+            document.getElementById('ui-total-kcal').innerText = d.kcal;
+            document.getElementById('ui-total-p').innerText = d.p;
+            document.getElementById('ui-total-cf').innerText = d.cf;
+            document.getElementById('ui-scan').innerText = d.scan;
+            document.getElementById('ui-add').innerText = d.add;
+        }
+
+        // 3. 掃描功能
+        const html5QrCode = new Html5Qrcode("reader");
+        function startScan() {
+            document.getElementById('reader').classList.remove('hidden');
+            const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+        }
+
+        async function onScanSuccess(decodedText) {
+            html5QrCode.stop();
+            document.getElementById('reader').classList.add('hidden');
+            document.getElementById('ui-scan').innerText = langData[currentLang].loading;
+
+            try {
+                // 調用 Open Food Facts API (英國數據非常齊全)
+                const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`);
+                const data = await res.json();
+
+                if (data.status === 1) {
+                    const p = data.product;
+                    tempFood = {
+                        name: p.product_name || p.product_name_en || "Unknown Item",
+                        kcal: p.nutriments['energy-kcal_100g'] || 0,
+                        p: p.nutriments.proteins_100g || 0,
+                        c: p.nutriments.carbohydrates_100g || 0,
+                        f: p.nutriments.fat_100g || 0
+                    };
+                    document.getElementById('food-name').value = tempFood.name;
+                    document.getElementById('ui-scan').innerText = langData[currentLang].scan;
+                    alert(`Found: ${tempFood.name}\n(100g: ${tempFood.kcal}kcal)`);
+                } else {
+                    alert(langData[currentLang].fail);
+                }
+            } catch (e) {
+                alert("Network Error");
+            }
+        }
+
+        // 4. 計算與顯示
+        function addCurrentFood() {
+            const weight = parseFloat(document.getElementById('food-weight').value);
+            const name = document.getElementById('food-name').value;
+
+            if (!name || isNaN(weight)) {
+                alert(langData[currentLang].manual);
+                return;
+            }
+
+            // 如果不是掃描來的，就設為預設值或報錯
+            let base = tempFood || { kcal: 0, p: 0, c: 0, f: 0 };
+            const ratio = weight / 100;
+
+            const finalKcal = Math.round(base.kcal * ratio);
+            const finalP = (base.p * ratio).toFixed(1);
+            const finalC = (base.c * ratio).toFixed(1);
+            const finalF = (base.f * ratio).toFixed(1);
+
+            totals.kcal += finalKcal;
+            totals.p += parseFloat(finalP);
+            totals.c += parseFloat(finalC);
+            totals.f += parseFloat(finalF);
+
+            updateDisplay();
+            
+            const li = document.createElement('li');
+            li.className = "flex justify-between bg-white p-4 rounded-xl shadow-sm border text-sm animate-fade-in";
+            li.innerHTML = `<div><b>${name}</b><br><small class="text-gray-400">${weight}g</small></div>
+                            <div class="text-right text-indigo-600 font-bold">${finalKcal} kcal</div>`;
+            document.getElementById('food-list').prepend(li);
+
+            // 重置
+            document.getElementById('food-name').value = '';
+            document.getElementById('food-weight').value = '';
+            tempFood = null;
+        }
+
+        function updateDisplay() {
+            document.getElementById('display-kcal').innerText = totals.kcal;
+            document.getElementById('display-p').innerText = totals.p.toFixed(1) + 'g';
+            document.getElementById('display-cf').innerText = `${totals.c.toFixed(1)}g / ${totals.f.toFixed(1)}g`;
+        }
+    </script>
+</body>
+</html>
