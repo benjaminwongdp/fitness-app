@@ -2,39 +2,249 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fitness Tracker UK</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fitness Pro UK</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        .progress-ring { transition: stroke-dashoffset 0.35s; transform: rotate(-90deg); transform-origin: 50% 50%; }
+        body { -webkit-tap-highlight-color: transparent; }
+    </style>
 </head>
-<body class="bg-slate-100 min-h-screen p-4 font-sans">
-    <div class="max-w-md mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
+<body class="bg-slate-50 min-h-screen font-sans antialiased text-slate-900">
+
+    <div class="max-w-md mx-auto min-h-screen bg-white shadow-2xl flex flex-col">
         
-        <div class="bg-indigo-700 p-6 text-white text-center relative">
-            <button onclick="toggleLang()" class="absolute right-4 top-4 bg-white/20 px-3 py-1 rounded-full text-xs hover:bg-white/30 transition">
-                EN / 中文
-            </button>
-            <h1 id="ui-title" class="text-2xl font-black">健身飲食計算 (UK)</h1>
-            <p id="ui-subtitle" class="text-indigo-200 text-xs mt-1">支援英國超市條碼掃描</p>
+        <header class="bg-indigo-600 p-6 pb-20 text-white relative">
+            <div class="flex justify-between items-center mb-4">
+                <h1 id="ui-title" class="text-xl font-black tracking-tight text-nowrap">FITNESS TRACKER PRO</h1>
+                <button onclick="toggleLang()" class="bg-white/20 px-4 py-1 rounded-full text-xs font-bold hover:bg-white/30">EN/中</button>
+            </div>
+            <div class="absolute left-6 right-6 top-24 bg-white rounded-2xl shadow-xl p-5 text-slate-800 flex items-center justify-between">
+                <div>
+                    <p id="ui-remaining" class="text-xs font-bold text-slate-400 uppercase">Remaining</p>
+                    <p id="remain-kcal" class="text-3xl font-black text-indigo-600">2000</p>
+                    <p class="text-xs text-slate-400 mt-1"><span id="ui-goal">Goal</span>: <span id="goal-val">2000</span> kcal</p>
+                </div>
+                <div class="relative h-20 w-20">
+                    <svg class="h-20 w-20">
+                        <circle class="text-slate-100" stroke-width="8" stroke="currentColor" fill="transparent" r="30" cx="40" cy="40"/>
+                        <circle id="progress-circle" class="text-indigo-500 progress-ring" stroke-width="8" stroke-dasharray="188.4" stroke-dashoffset="188.4" stroke-linecap="round" stroke="currentColor" fill="transparent" r="30" cx="40" cy="40"/>
+                    </svg>
+                    <span id="percent-val" class="absolute inset-0 flex items-center justify-center text-xs font-bold">0%</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="mt-20 px-6 grid grid-cols-3 gap-4 text-center">
+            <div class="bg-rose-50 p-3 rounded-xl border border-rose-100">
+                <p class="text-[10px] font-bold text-rose-400 uppercase">Protein</p>
+                <p id="display-p" class="font-black text-rose-600">0g</p>
+            </div>
+            <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                <p class="text-[10px] font-bold text-emerald-400 uppercase">Carbs</p>
+                <p id="display-c" class="font-black text-emerald-600">0g</p>
+            </div>
+            <div class="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                <p class="text-[10px] font-bold text-amber-400 uppercase">Fat</p>
+                <p id="display-f" class="font-black text-amber-600">0g</p>
+            </div>
         </div>
 
-        <div class="flex justify-around p-5 bg-white border-b">
-            <div class="text-center">
-                <p id="ui-total-kcal" class="text-[10px] text-gray-400 font-bold">CALORIES</p>
-                <p id="display-kcal" class="text-xl font-black text-indigo-600">0</p>
-            </div>
-            <div class="text-center border-x px-6">
-                <p id="ui-total-p" class="text-[10px] text-gray-400 font-bold">PROTEIN</p>
-                <p id="display-p" class="text-xl font-black text-rose-500">0g</p>
-            </div>
-            <div class="text-center">
-                <p id="ui-total-cf" class="text-[10px] text-gray-400 font-bold">C / F</p>
-                <p id="display-cf" class="text-sm font-bold text-gray-600 pt-1">0g / 0g</p>
-            </div>
-        </div>
+        <main class="flex-1 p-6 space-y-4">
+            <div id="reader" class="hidden rounded-2xl overflow-hidden border-2 border-indigo-100 mb-4"></div>
 
-        <div class="p-6 space-y-4">
-            <div id="reader" class="hidden rounded-xl overflow-hidden border-2 border-dashed border-gray-300"></div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="startScan()" class="bg-slate-900 text-white rounded-xl py-4 font-bold flex flex-col items-center justify-center shadow-lg active:scale-95 transition">
+                    <span class="text-xl mb-1">📷</span>
+                    <span id="ui-scan" class="text-xs">Scan Barcode</span>
+                </button>
+                <button onclick="setGoal()" class="bg-white border-2 border-slate-900 text-slate-900 rounded-xl py-4 font-bold flex flex-col items-center justify-center active:scale-95 transition">
+                    <span class="text-xl mb-1">🎯</span>
+                    <span id="ui-set-goal" class="text-xs">Set Goal</span>
+                </button>
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <input id="food-name" type="text" placeholder="Food Name" class="bg-white border rounded-lg p-3 text-sm focus:ring-2 ring-indigo-500 outline-none">
+                    <input id="food-weight" type="number" placeholder="Weight (g)" class="bg-white border rounded-lg p-3 text-sm focus:ring-2 ring-indigo-500 outline-none">
+                </div>
+                <button onclick="addCurrentFood()" class="w-full bg-indigo-600 text-white rounded-lg py-3 font-bold hover:bg-indigo-700">
+                    + <span id="ui-add">Add to Diary</span>
+                </button>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="ui-diary" class="font-extrabold text-slate-800">Today's Diary</h3>
+                    <button onclick="clearAll()" class="text-xs text-rose-500 font-bold">Clear All</button>
+                </div>
+                <ul id="food-list" class="space-y-3 pb-10">
+                    </ul>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Language Data
+        const langData = {
+            zh: { title: "健身進度追蹤", remaining: "剩餘熱量", goal: "目標", scan: "掃描條碼", set: "設定目標", add: "加入清單", diary: "今日飲食", alert_goal: "請輸入每日熱量目標:", loading: "查詢中...", fail: "找不到此產品", kcal: "大卡" },
+            en: { title: "FITNESS TRACKER PRO", remaining: "Remaining", goal: "Goal", scan: "Scan Barcode", set: "Set Goal", add: "Add to Diary", diary: "Today's Diary", alert_goal: "Enter your daily kcal goal:", loading: "Searching...", fail: "Not found", kcal: "kcal" }
+        };
+
+        let currentLang = 'en';
+        let dailyGoal = localStorage.getItem('kcalGoal') || 2000;
+        let diary = JSON.parse(localStorage.getItem('fitnessDiary')) || [];
+        let tempFood = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateUI();
+            renderList();
+        });
+
+        function toggleLang() {
+            currentLang = currentLang === 'en' ? 'zh' : 'en';
+            updateUI();
+        }
+
+        function setGoal() {
+            const newGoal = prompt(langData[currentLang].alert_goal, dailyGoal);
+            if (newGoal) {
+                dailyGoal = parseInt(newGoal);
+                localStorage.setItem('kcalGoal', dailyGoal);
+                updateUI();
+            }
+        }
+
+        async function startScan() {
+            const reader = document.getElementById('reader');
+            reader.classList.remove('hidden');
+            const html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 180 } };
+            
+            try {
+                await html5QrCode.start({ facingMode: "environment" }, config, async (decodedText) => {
+                    html5QrCode.stop();
+                    reader.classList.add('hidden');
+                    document.getElementById('ui-scan').innerText = langData[currentLang].loading;
+                    
+                    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`);
+                    const data = await res.json();
+                    
+                    if (data.status === 1) {
+                        const p = data.product;
+                        tempFood = {
+                            name: p.product_name || p.product_name_en || "UK Product",
+                            kcal: p.nutriments['energy-kcal_100g'] || 0,
+                            p: p.nutriments.proteins_100g || 0,
+                            c: p.nutriments.carbohydrates_100g || 0,
+                            f: p.nutriments.fat_100g || 0
+                        };
+                        document.getElementById('food-name').value = tempFood.name;
+                    } else {
+                        alert(langData[currentLang].fail);
+                    }
+                    document.getElementById('ui-scan').innerText = langData[currentLang].scan;
+                });
+            } catch (err) { alert("Camera Error: Check HTTPS"); }
+        }
+
+        function addCurrentFood() {
+            const name = document.getElementById('food-name').value;
+            const weight = parseFloat(document.getElementById('food-weight').value);
+            
+            if (!name || isNaN(weight)) return;
+
+            const base = tempFood || { kcal: 0, p: 0, c: 0, f: 0 };
+            const ratio = weight / 100;
+            
+            const item = {
+                id: Date.now(),
+                name: name,
+                weight: weight,
+                kcal: Math.round(base.kcal * ratio),
+                p: (base.p * ratio).toFixed(1),
+                c: (base.c * ratio).toFixed(1),
+                f: (base.f * ratio).toFixed(1)
+            };
+
+            diary.unshift(item);
+            localStorage.setItem('fitnessDiary', JSON.stringify(diary));
+            
+            document.getElementById('food-name').value = '';
+            document.getElementById('food-weight').value = '';
+            tempFood = null;
+            
+            renderList();
+            updateUI();
+        }
+
+        function renderList() {
+            const listEl = document.getElementById('food-list');
+            listEl.innerHTML = diary.map(item => `
+                <li class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
+                    <div>
+                        <p class="font-bold text-slate-800">${item.name}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+                            ${item.weight}g • P:${item.p} C:${item.c} F:${item.f}
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="font-black text-indigo-600">${item.kcal}</span>
+                        <button onclick="deleteItem(${item.id})" class="text-rose-200 hover:text-rose-500">✕</button>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        function deleteItem(id) {
+            diary = diary.filter(i => i.id !== id);
+            localStorage.setItem('fitnessDiary', JSON.stringify(diary));
+            renderList();
+            updateUI();
+        }
+
+        function clearAll() {
+            if (confirm("Clear all data?")) {
+                diary = [];
+                localStorage.removeItem('fitnessDiary');
+                renderList();
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            const d = langData[currentLang];
+            document.getElementById('ui-title').innerText = d.title;
+            document.getElementById('ui-remaining').innerText = d.remaining;
+            document.getElementById('ui-goal').innerText = d.goal;
+            document.getElementById('ui-scan').innerText = d.scan;
+            document.getElementById('ui-set-goal').innerText = d.set;
+            document.getElementById('ui-add').innerText = d.add;
+            document.getElementById('ui-diary').innerText = d.diary;
+
+            const totalKcal = diary.reduce((sum, item) => sum + item.kcal, 0);
+            const totalP = diary.reduce((sum, item) => sum + parseFloat(item.p), 0).toFixed(1);
+            const totalC = diary.reduce((sum, item) => sum + parseFloat(item.c), 0).toFixed(1);
+            const totalF = diary.reduce((sum, item) => sum + parseFloat(item.f), 0).toFixed(1);
+
+            document.getElementById('goal-val').innerText = dailyGoal;
+            document.getElementById('remain-kcal').innerText = dailyGoal - totalKcal;
+            document.getElementById('display-p').innerText = totalP + 'g';
+            document.getElementById('display-c').innerText = totalC + 'g';
+            document.getElementById('display-f').innerText = totalF + 'g';
+
+            // Update Progress Circle
+            const percent = Math.min(Math.round((totalKcal / dailyGoal) * 100), 100);
+            const offset = 188.4 - (percent / 100 * 188.4);
+            document.getElementById('progress-circle').style.strokeDashoffset = offset;
+            document.getElementById('percent-val').innerText = percent + '%';
+        }
+    </script>
+</body>
+</html>            <div id="reader" class="hidden rounded-xl overflow-hidden border-2 border-dashed border-gray-300"></div>
             
             <button id="scan-btn" onclick="startScan()" class="w-full bg-emerald-500 text-white rounded-xl py-3 font-bold flex items-center justify-center gap-2 hover:bg-emerald-600 transition">
                 📷 <span id="ui-scan">掃描條碼 (Scan Barcode)</span>
